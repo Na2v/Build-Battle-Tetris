@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.Python
+build/
+dist/
+*.spec.bak
+.env
+.venv/
+venv/
+*.egg-info/
+.DS_Store
+Thumbs.db
+settings.json
+
+# Generated macOS icon (CI can recreate from ico)
+assets/app.icns
