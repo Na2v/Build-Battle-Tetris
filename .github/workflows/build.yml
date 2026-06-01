@@ -1,8 +1,11 @@
-name: Build Battle Tetress
+name: Build Battle Tetris
 
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
+      - master
     tags:
       - "v*"
 
@@ -14,13 +17,30 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Verify project files
+        shell: pwsh
+        run: |
+          foreach ($f in @("main.py", "battle_tetris.spec", "requirements.txt", "src/ui/app.py")) {
+            if (-not (Test-Path $f)) {
+              Write-Error "Missing $f — upload the full game folder to GitHub, not only the workflow YAML."
+              exit 1
+            }
+          }
       - name: Install and build
         run: |
-          pip install -r requirements.txt -r requirements-build.txt
-          pyinstaller battle_tetris.spec --noconfirm
+          python -m pip install -r requirements.txt -r requirements-build.txt
+          python -m PyInstaller battle_tetris.spec --noconfirm --clean
+      - name: Verify exe
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "dist\BattleTetris.exe")) {
+            Write-Error "dist\BattleTetris.exe not found after build"
+            Get-ChildItem dist -ErrorAction SilentlyContinue
+            exit 1
+          }
       - name: Zip artifact
         run: |
-          Compress-Archive -Path dist\BattleTetris.exe -DestinationPath dist\BattleTetris-Windows.zip
+          Compress-Archive -Path dist\BattleTetris.exe -DestinationPath dist\BattleTetris-Windows.zip -Force
       - uses: actions/upload-artifact@v4
         with:
           name: BattleTetris-Windows
@@ -33,17 +53,59 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Verify project files
+        run: |
+          for f in main.py battle_tetris.spec requirements.txt src/ui/app.py; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Missing $f — push the full game project to GitHub."
+              exit 1
+            fi
+          done
+      - name: Generate macOS icon (optional)
+        run: |
+          ICNS="assets/app.icns"
+          ICO="assets/New-Piskel-_1_.ico"
+          if [ -f "$ICNS" ]; then exit 0; fi
+          if [ ! -f "$ICO" ]; then echo "No ico — skip Dock icon"; exit 0; fi
+          mkdir -p build/AppIcon.iconset
+          if sips -s format png "$ICO" --out build/icon_source.png 2>/dev/null; then
+            SRC="build/icon_source.png"
+            sips -z 16 16 "$SRC" --out build/AppIcon.iconset/icon_16x16.png
+            sips -z 32 32 "$SRC" --out build/AppIcon.iconset/icon_16x16@2x.png
+            sips -z 32 32 "$SRC" --out build/AppIcon.iconset/icon_32x32.png
+            sips -z 64 64 "$SRC" --out build/AppIcon.iconset/icon_32x32@2x.png
+            sips -z 128 128 "$SRC" --out build/AppIcon.iconset/icon_128x128.png
+            sips -z 256 256 "$SRC" --out build/AppIcon.iconset/icon_128x128@2x.png
+            sips -z 256 256 "$SRC" --out build/AppIcon.iconset/icon_256x256.png
+            sips -z 512 512 "$SRC" --out build/AppIcon.iconset/icon_256x256@2x.png
+            sips -z 512 512 "$SRC" --out build/AppIcon.iconset/icon_512x512.png
+            sips -z 1024 1024 "$SRC" --out build/AppIcon.iconset/icon_512x512@2x.png
+            iconutil -c icns build/AppIcon.iconset -o "$ICNS" || echo "iconutil failed — continue without icns"
+          else
+            echo "sips failed — continue without icns"
+          fi
       - name: Install and build
         run: |
-          chmod +x scripts/build_macos.sh
-          ./scripts/build_macos.sh
+          python -m pip install -r requirements.txt -r requirements-build.txt
+          python -m PyInstaller battle_tetris.spec --noconfirm --clean
+      - name: Verify app bundle
+        run: |
+          if [ ! -d "dist/BattleTetris.app/Contents/MacOS/BattleTetris" ]; then
+            echo "::error::BattleTetris.app not built correctly"
+            ls -la dist/ || true
+            ls -la dist/BattleTetris.app/Contents/MacOS/ 2>/dev/null || true
+            exit 1
+          fi
+          echo "Build OK: dist/BattleTetris.app"
       - name: Zip artifact
         run: |
           cd dist
           if [ -d BattleTetris.app ]; then
             zip -r BattleTetris-macOS.zip BattleTetris.app
           else
-            zip BattleTetris-macOS.zip BattleTetris
+            echo "::error::BattleTetris.app not found"
+            ls -la
+            exit 1
           fi
       - uses: actions/upload-artifact@v4
         with:
