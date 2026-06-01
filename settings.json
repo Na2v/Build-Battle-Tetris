@@ -1,0 +1,20 @@
+{
+  "window_width": 1280,
+  "window_height": 720,
+  "fullscreen": false,
+  "ui_scale": 1.0,
+  "master_volume": 1.0,
+  "bgm_volume": 1.0,
+  "sfx_volume": 1.0,
+  "player_name": "Player",
+  "server_url": "ws://127.0.0.1:8765",
+  "resource_pack": "default",
+  "target_score": 15000,
+  "match_duration_sec": 180,
+  "garbage_delay_ms": 1200,
+  "max_players": 4,
+  "allow_hold": true,
+  "ghost_piece": true,
+  "show_controls_hint": true,
+  "sync_interval_sec": 0.15
+}
