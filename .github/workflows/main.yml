@@ -1,0 +1,51 @@
+name: Build Battle Tetress
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install and build
+        run: |
+          pip install -r requirements.txt -r requirements-build.txt
+          pyinstaller battle_tetris.spec --noconfirm
+      - name: Zip artifact
+        run: |
+          Compress-Archive -Path dist\BattleTetris.exe -DestinationPath dist\BattleTetris-Windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BattleTetris-Windows
+          path: dist/BattleTetris-Windows.zip
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install and build
+        run: |
+          chmod +x scripts/build_macos.sh
+          ./scripts/build_macos.sh
+      - name: Zip artifact
+        run: |
+          cd dist
+          if [ -d BattleTetris.app ]; then
+            zip -r BattleTetris-macOS.zip BattleTetris.app
+          else
+            zip BattleTetris-macOS.zip BattleTetris
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BattleTetris-macOS
+          path: dist/BattleTetris-macOS.zip
